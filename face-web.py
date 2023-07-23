@@ -10,7 +10,7 @@ def load_known_faces(known_faces_folder):
         face_locations = face_recognition.face_locations(image)
         
         if len(face_locations) == 0:
-            # No face detected in the image, skip it
+            print(f"No face found in {file}. Skipping...")
             continue
         
         face_encoding = face_recognition.face_encodings(image, face_locations)[0]
@@ -20,9 +20,9 @@ def load_known_faces(known_faces_folder):
     return known_face_encodings, known_face_names
 
 
-def main():
+def main(camera_source):
     known_faces_folder = "known_faces"
-    video_capture = cv2.VideoCapture(0)
+    video_capture = cv2.VideoCapture(camera_source)
 
     known_face_encodings, known_face_names = load_known_faces(known_faces_folder)
 
@@ -35,6 +35,7 @@ def main():
         face_encodings = face_recognition.face_encodings(frame, face_locations)
 
         for face_encoding in face_encodings:
+            
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
             name = "Unknown"
 
@@ -55,4 +56,12 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    main()
+    camera_source = input("Enter '0' to use the webcam or '1' to use an external camera: ")
+    try:
+        camera_source = int(camera_source)
+        if camera_source == 0 or camera_source == 1:
+            main(camera_source)
+        else:
+            print("Invalid input. Please enter '0' or '1' to select the camera source.")
+    except ValueError:
+        print("Invalid input. Please enter '0' or '1' to select the camera source.")
