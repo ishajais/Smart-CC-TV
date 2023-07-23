@@ -35,7 +35,6 @@ def main():
         face_encodings = face_recognition.face_encodings(frame, face_locations)
 
         for face_encoding in face_encodings:
-            # Compare the face encoding with known faces
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
             name = "Unknown"
 
@@ -43,7 +42,6 @@ def main():
                 match_index = matches.index(True)
                 name = known_face_names[match_index]
 
-            # Draw a rectangle around the face and display the name
             top, right, bottom, left = face_recognition.face_locations(frame)[0]
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
             cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.7, (255, 255, 255), 1)
