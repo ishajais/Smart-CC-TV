@@ -4,8 +4,8 @@ import imutils
 import numpy as np
 from centroidtracker import CentroidTracker
 
-protopath = "D:/people counting/MobileNetSSD_deploy.prototxt"
-modelpath = "D:/people counting/MobileNetSSD_deploy.caffemodel"
+protopath = "MobileNetSSD_deploy.prototxt"
+modelpath = "MobileNetSSD_deploy.caffemodel"
 detector = cv2.dnn.readNetFromCaffe(prototxt=protopath, caffeModel=modelpath)
 
 CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
@@ -131,7 +131,7 @@ def main():
 
         cv2.imshow("Application", frame)
         key = cv2.waitKey(1)
-        if key == ord('q'):
+        if key == ord('p'):
             break
 
     cv2.destroyAllWindows()
