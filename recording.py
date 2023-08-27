@@ -65,7 +65,7 @@ def record_video(output_file, camera_index, fps=20.0, duration=10):
 if __name__ == "__main__":
     output_file = "recorded_video.avi"
     fps = 20.0
-    duration = 10  
+    duration = 9999999
 
     camera_index = select_camera()
     if camera_index is not None:
