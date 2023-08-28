@@ -1,67 +1,86 @@
 import face_recognition
 import cv2
-import os
-def load_known_faces(known_faces_folder):
-    known_face_encodings = []
-    known_face_names = []
+import os, sys
+import numpy as np
+import math
 
-    for file in os.listdir(known_faces_folder):
-        image = face_recognition.load_image_file(os.path.join(known_faces_folder, file))
-        face_locations = face_recognition.face_locations(image)
-        
-        if len(face_locations) == 0:
-            print(f"No face found in {file}. Skipping...")
-            continue
-        
-        face_encoding = face_recognition.face_encodings(image, face_locations)[0]
-        known_face_encodings.append(face_encoding)
-        known_face_names.append(file.split('.')[0])
+def face_confidence(face_distance, face_match_threshold=0.8):
+    range=(1.0-face_match_threshold)
+    linear_val=(1.0-face_distance)/(range*2.0)
+    if face_distance>face_match_threshold:
+        return str(round(linear_val*100, 2))+'%'
+    else:
+        value=(linear_val+((1.0-linear_val)*math.pow((linear_val-0.5)*2, 0.2)))*100
+        return str(round(value, 2))+'%'
 
-    return known_face_encodings, known_face_names
+class FaceRecognition:
+    face_locations=[]
+    face_encodings=[]
+    face_names=[]
+    known_face_encodings=[]
+    known_face_names=[]
+    process_current_frame=True
 
+    def __init__(self):
+        self.encode_faces()
 
-def main(camera_source):
-    known_faces_folder = "known_faces"
-    video_capture = cv2.VideoCapture(camera_source)
+    def encode_faces(self):
+        for image in os.listdir('known_faces'):
+            face_image=face_recognition.load_image_file(f'known_faces/{image}')
+            face_encoding=face_recognition.face_encodings(face_image)[0]
+            self.known_face_encodings.append(face_encoding)
+            self.known_face_names.append(image)
+        print(self.known_face_names)
 
-    known_face_encodings, known_face_names = load_known_faces(known_faces_folder)
+    def run_recognition(self): 
+        video_capture=cv2.VideoCapture(0)
+        if not video_capture.isOpened():
+            sys.exit('Video source not found...')
 
-    while True:
-        ret, frame = video_capture.read()
-        if not ret:
-            break
+        while True:
+            ret, frame=video_capture.read()
 
-        face_locations = face_recognition.face_locations(frame)
-        face_encodings = face_recognition.face_encodings(frame, face_locations)
+            if self.process_current_frame: 
+                small_frame=cv2.resize(frame, (0, 0), fx=0.35, fy=0.35)
+                rgb_small_frame=small_frame[:, :, ::-1]
 
-        for face_encoding in face_encodings:
+                self.face_locations=face_recognition.face_locations(rgb_small_frame)
+                self.face_encodings=face_recognition.face_encodings(rgb_small_frame, self.face_locations)
+
+                self.face_names=[]
+                for face_encoding in self.face_encodings:
+                    matches=face_recognition.compare_faces(self.known_face_encodings, face_encoding)
+                    name='Unknown'
+                    confidence='Unknown'
+
+                    face_distances=face_recognition.face_distance(self.known_face_encodings, face_encoding)
+                    best_match_index=np.argmin(face_distances)
+
+                    if matches[best_match_index]:
+                        name=self.known_face_names[best_match_index]
+                        confidence=face_confidence(face_distances[best_match_index])
+                    self.face_names.append(f'{name} ({confidence})')
+                self.process_current_frame=not self.process_current_frame
+
+                for (top, right, bottom, left), name in zip(self.face_locations, self.face_names):
+                    top *=4
+                    right *=4
+                    bottom *=4
+                    left *=4
+
+                    cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+                    cv2.rectangle(frame, (left, bottom-35), (right, bottom), (0, 0, 255), -1)
+                    cv2.putText(frame, name, (left+6, bottom-6), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 1)
+
+                cv2.imshow('Face Recognition', frame)
+
+                if cv2.waitKey(1)==ord('q'):
+                    break
+        video_capture.release()
+        cv2.destroyAllWindows()
+
             
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-            name = "Unknown"
-
-            if True in matches:
-                match_index = matches.index(True)
-                name = known_face_names[match_index]
-
-            top, right, bottom, left = face_recognition.face_locations(frame)[0]
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-            cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.7, (255, 255, 255), 1)
-
-        cv2.imshow("Video", frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    video_capture.release()
-    cv2.destroyAllWindows()
-
 if __name__ == "__main__":
-    camera_source = input("Enter '0' to use the webcam or '1' to use an external camera: ")
-    try:
-        camera_source = int(camera_source)
-        if camera_source == 0 or camera_source == 1:
-            main(camera_source)
-        else:
-            print("Invalid input. Please enter '0' or '1' to select the camera source.")
-    except ValueError:
-        print("Invalid input. Please enter '0' or '1' to select the camera source.")
+    fr = FaceRecognition()
+    fr.run_recognition()   
+
